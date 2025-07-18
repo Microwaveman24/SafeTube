@@ -7,6 +7,7 @@ import {
 const input = document.getElementById("videoIdInput");
 const addButton = document.getElementById("addButton");
 const allowlistElement = document.getElementById("allowlist");
+const pingButton = document.getElementById("pingButton")
 
 function renderAllowlist(allowedIds) {
   allowlistElement.innerHTML = "";
@@ -35,4 +36,24 @@ addButton.addEventListener("click", () => {
   }
 });
 
+pingButton.addEventListener("click", handlePing)
+
+function handlePing(){
+  fetch("http://localhost:5000/ping", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    //hardcoded id for the moment jsut to test.
+    body: JSON.stringify({ from: "Extension Ping Button" ,  id : "FWAdfuPpLOc"})
+  })
+    .then(response => response.json())
+    .then(data => {
+      alert("Server response: " + data.message);
+    })
+    .catch(error => {
+      console.error("Ping error:", error);
+      alert("Failed to ping server.");
+    });
+}
 getAllowedVideoIds().then(renderAllowlist);
