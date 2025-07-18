@@ -3,6 +3,7 @@ Currently a protype for the extension has been completed
   - Able to block and allow youtube videos
   - Local DB
   - Good base logic for production extension
+  - Basic flask server integration
 
 Next Steps
   - Make a prototype server to handle api and have its own DB and python YT scraping
