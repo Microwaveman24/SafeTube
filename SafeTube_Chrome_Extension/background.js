@@ -42,7 +42,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     getAllowedVideoIds().then((ids) => {
       sendResponse(ids.includes(message.videoId));
     });
-    console.log("Does this work?");
     return true;
   }
 });
