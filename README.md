@@ -2,13 +2,13 @@ SafeTube is currently in its first phase
 Currently a protype for the extension has been completed
   - Able to block and allow youtube videos
   - Can Allow YT channels
-  - Local DB
+  - Local DB on the Extension
   - Good base logic for production extension
-  - Basic flask server integration
+  - More complex flask integration using YT API
 
 Next Steps
-  - Be able to block channels
-  - Be able to block YT shorts
+  - Be able to rm allowed channels
+  - Be able to block/allow YT shorts
   - Integrate PostgreSQL on the Flask Server
   - Make a prototype server to handle api and have its own DB and python YT scraping
   - format a general GPT prompt give content suggestions for YT vids and channels
