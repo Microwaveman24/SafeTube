@@ -23,7 +23,7 @@ async function checkAndRedirect() {
 
     if (!isAllowed) {
       console.log(`[YouTube Blocker] Blocking video ${videoId}`);
-      window.location.replace(chrome.runtime.getURL("request.html"));
+      window.location.replace(chrome.runtime.getURL(`redirects/video_popback.html?videoId=${videoId}`));
     }
   } catch (err) {
     console.error("Error checking allowlist:", err);

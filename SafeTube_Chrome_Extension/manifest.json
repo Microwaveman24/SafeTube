@@ -33,7 +33,10 @@
   },
 "web_accessible_resources": [
   {
-    "resources": ["request.html"],
+    "resources": [
+      "request.html",
+      "redirects/video_popback.html"
+    ],
     "matches": ["<all_urls>"]
   }
 ]
