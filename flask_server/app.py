@@ -1,8 +1,10 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from yt_function import get_all_channel_videos_from_video
+import SQLalchemy
 app = Flask(__name__)
 CORS(app)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://myuser:mypassword@localhost/mydevdb'
 
 #sucesessful ping to extension
 @app.route("/ping", methods = ['POST'])

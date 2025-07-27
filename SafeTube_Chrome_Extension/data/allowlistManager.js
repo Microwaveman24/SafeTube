@@ -25,3 +25,10 @@ export async function AllowChannel(all_ids) {
     }
   chrome.runtime.sendMessage({ type: "resyncRules" });
 }
+
+export async function RemoveChannel(all_ids) {
+  for(const id of all_ids){
+      await dbRemove(id);
+    }
+  chrome.runtime.sendMessage({ type: "resyncRules" })
+}

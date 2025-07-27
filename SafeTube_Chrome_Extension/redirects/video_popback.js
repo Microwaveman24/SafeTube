@@ -15,6 +15,15 @@ addChannel.addEventListener("click", () => {
     AllowChannelbyID(videoId)
 })
 
+
+addVideo.addEventListener("click", () => {
+  addAllowedVideo(videoId)
+})
+
+yt_homepage.addEventListener("click", () => {
+  window.location.href = "https://youtube.com";
+})
+
 function AllowChannelbyID(videoId){
   fetch("http://localhost:5000/getChannelIds", {
     method: "POST",
