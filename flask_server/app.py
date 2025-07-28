@@ -1,10 +1,17 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from yt_function import get_all_channel_videos_from_video
-import SQLalchemy
+from flask_sqlalchemy import SQLAlchemy
+from models import db , ParentUser, ChildAccount, AllowedVideo
+from dotenv import load_dotenv
+import os
 app = Flask(__name__)
 CORS(app)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://myuser:mypassword@localhost/mydevdb'
+load_dotenv()  # loads variables from .env
+
+#secure in the os.
+DATABASE_URL = os.getenv('DATABASE_URL')
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 
 #sucesessful ping to extension
 @app.route("/ping", methods = ['POST'])

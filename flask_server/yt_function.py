@@ -1,7 +1,9 @@
 from googleapiclient.discovery import build
+from dotenv import load_dotenv
+import os
 
-# Replace with your API key
-API_KEY = 'AIzaSyCVu8KQ_0eUiWIV-u998Yfc3DiaZhz_iQA'
+# More secure API storage I do believe
+API_KEY = os.getenv('YOUTUBE_API')
 
 def get_channel_id_from_video(video_id, youtube):
     response = youtube.videos().list(
