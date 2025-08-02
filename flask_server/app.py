@@ -5,6 +5,10 @@ from flask_sqlalchemy import SQLAlchemy
 from models import db , ParentUser, ChildAccount, AllowedVideo
 from dotenv import load_dotenv
 import os
+
+#blueprints also wacky way to show a ensted directory 
+from blueprints.auth import auth_bp
+
 app = Flask(__name__)
 CORS(app)
 load_dotenv()  # loads variables from .env

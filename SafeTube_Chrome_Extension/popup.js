@@ -65,7 +65,6 @@ function handlePing(){
     });
 }
 getAllowedVideoIds().then(renderAllowlist);
-
 function getVideoIdFromUrl(url) {
   const match = url.match(/[?&]v=([^&]+)/);
   return match ? match[1] : null;
@@ -81,12 +80,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
   RemoveChannel(channel_ids)
   
 });
-
-
 })
-
-
-
 async function getChannelIds(videoId) {
   try {
     const response = await fetch("http://localhost:5000/getChannelIds", {

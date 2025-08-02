@@ -2,11 +2,8 @@ function getVideoIdFromUrl(url) {
   const match = url.match(/[?&]v=([^&]+)/);
   return match ? match[1] : null;
 }
-
-
 lastVideoId = null;
 let lasturl = location.href
-
 async function checkAndRedirect() {
   const videoId = getVideoIdFromUrl(location.href);
 
@@ -37,6 +34,5 @@ document.body.addEventListener("mouseup", function(event) {
     setTimeout( () => {
     checkAndRedirect();
     console.log("URL is checked");
-}, 200); // 2000 milliseconds = 2 seconds
-    
+}, 200); // 2000 milliseconds = 2 seconds    
 });

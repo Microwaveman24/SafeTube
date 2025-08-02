@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import os
 
 # More secure API storage I do believe
+load_dotenv()
 API_KEY = os.getenv('YOUTUBE_API')
 
 def get_channel_id_from_video(video_id, youtube):
