@@ -10,15 +10,22 @@ def signup():
     email = data.get("email")
     password = data.get("password")
 
+    
+
+    if not email or not password:
+        return jsonify({"success": False, "message": "Missing username or password"}), 400
+
+
     if ParentUser.query.filter_by(email=email).first():
         return jsonify({"error": "Email already registered"}), 400
     
     hashed_password = generate_password_hash(password)
     new_user = ParentUser(email = email, password_hash = hashed_password)
     db.session.add(new_user)
-    db.session.commit
+    db.session.commit()
 
-    return jsonify({"message": "Parent account created!"}), 201
+    return jsonify({"success": True, "message": "Signup successful"}), 200
+
 
 #how do they keep the credentails
 @auth_bp.route("/login", methods=['POST'])

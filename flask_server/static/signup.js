@@ -4,17 +4,23 @@ document.getElementById("signupForm").addEventListener("submit", async function 
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
 
-    const res = await fetch("/auth/signup", {
+    const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({email, password})
+        body: JSON.stringify({email : email, password : password})
     });
 
-    const data = await res.json
-    alert(data.message);
-
+    const data = await res.json();
+    (data.error);
+    
+    
     if (res.ok) {
-        window.location.href = "../html_pages/login"
+        window.location.href = "/login"
     }
 
 })
+
+document.getElementById("login").addEventListener("click", () => {
+    window.location.href = "/login"
+})
+
