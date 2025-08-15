@@ -7,7 +7,7 @@ Currently a protype for the extension has been completed
   - basic account creation
 
 Next Steps
-  - Parent Child creation and video approval
+  - Parent DashBoard and video approval
   - Be able to block/allow YT shorts
   - format a general GPT prompt give content suggestions for YT vids and channels
   - Make a prototype IOS app to create a parental apporval mechanism.
