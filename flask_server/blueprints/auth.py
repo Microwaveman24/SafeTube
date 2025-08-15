@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, ParentUser, ChildAccount
 
@@ -36,6 +36,9 @@ def login():
 
     user = ParentUser.query.filter_by(email=email).first()
     if user and check_password_hash(user.password_hash, password):
+        #store the user data
+        session['user_id'] = user.id
+        session['email'] = user.email
         return jsonify({"message": "Login successful", "parent_id": user.id}), 200
     return jsonify({"error": "Invalid credentials"}), 401
 
@@ -43,7 +46,7 @@ def login():
 @auth_bp.route("/create_child", methods=['POST'])
 def create_child():
     data = request.get_json
-    parent_id = data.get("parent_id")
+    parent_id = session.get['User_Id']
     name = data.get("name")
 
     parent = ParentUser.query.get(parent_id)

@@ -17,6 +17,7 @@ app.register_blueprint(auth_bp, url_prefix="/api/auth")
 #secure in the os.
 DATABASE_URL = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+app.secret_key=os.getenv('SECRET_KEY')
 db.init_app(app)
 #sucesessful ping to extension
 @app.route("/ping", methods = ['POST'])
