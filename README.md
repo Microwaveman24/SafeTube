@@ -7,6 +7,7 @@ Currently a protype for the extension has been completed
   - basic account creation
 
 Next Steps
+  - Convert to SPA app so that stuff can work better in the future
   - Flask login for website auth, and jw tokens for app auth
   - Parent DashBoard and video approval
   - Be able to block/allow YT shorts
