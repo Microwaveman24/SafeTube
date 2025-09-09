@@ -7,8 +7,8 @@ Currently a protype for the extension has been completed
   - basic account creation
 
 Next Steps
-  - Convert to SPA app so that stuff can work better in the future
-  - Flask login for website auth, and jw tokens for app auth
+  - Start to create an IOS prototype, first step is setting up a flask server on the wifi!
+  - And jw tokens for app auth
   - Parent DashBoard and video approval
   - Be able to block/allow YT shorts
   - format a general GPT prompt give content suggestions for YT vids and channels
