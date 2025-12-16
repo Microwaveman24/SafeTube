@@ -1,6 +1,7 @@
-document.getElementById("create_child").addEventListener("click", () => {
+const token = localStorage.getItem("access_token");
 
-window.location.href = "/create_child"
-
-})
-
+fetch("/api/dashboard", {
+  headers: {
+    Authorization: `Bearer ${token}`
+  }
+});
