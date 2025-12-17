@@ -7,8 +7,8 @@ Currently a protype for the extension has been completed
   - basic account creation
 
 Next Steps
+  - Create dashboard and integrate parent admin abilities/child accoutn creation
   - Start to create an IOS prototype, first step is setting up a flask server on the wifi!
-  - And jw tokens for app auth
   - Parent DashBoard and video approval
   - Be able to block/allow YT shorts
   - format a general GPT prompt give content suggestions for YT vids and channels
