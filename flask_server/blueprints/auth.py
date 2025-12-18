@@ -15,11 +15,8 @@ def signup():
     email = data.get("email")
     password = data.get("password")
 
-    
-
     if not email or not password:
         return jsonify({"success": False, "message": "Missing username or password"}), 400
-
 
     if ParentUser.query.filter_by(email=email).first():
         
@@ -40,21 +37,13 @@ def login_api():
     Authenticate parent and issue JWT access token.
     """
     data = request.get_json()
-
-
     email = data.get('email')
     password = data.get('password')
 
-
     parent = ParentUser.query.filter_by(email=email).first()
-
-
     if not parent or not check_password_hash(parent.password_hash, password):
         return jsonify({'error': 'Invalid credentials'}), 401
-
-
-    access_token = create_access_token(identity=parent.id)
-
+    access_token = create_access_token(identity=str(parent.id))
 
     return jsonify({
         'access_token': access_token,
@@ -65,7 +54,7 @@ def login_api():
 @jwt_required()
 def create_child():
     data = request.get_json()
-    parent_id = get_jwt_identity()
+    parent_id = int(get_jwt_identity())
     name = data.get("name")
 
     parent = ParentUser.query.get(parent_id)
@@ -78,4 +67,15 @@ def create_child():
 
     return jsonify({"message": "Child account created"}), 201
 
+@auth_bp.route("/remove_child/<int:child_id>", methods=["DELETE"])
+@jwt_required()
+def remove_child(child_id):
+    parent_id = int(get_jwt_identity())
+    child = ChildAccount.query.get(child_id)
 
+    if not child or child.parent_id != parent_id:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    db.session.delete(child)
+    db.session.commit()
+    return jsonify({"message": "Child removed"})

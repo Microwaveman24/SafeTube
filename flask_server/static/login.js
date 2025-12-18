@@ -29,8 +29,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ✅ Store JWT
     localStorage.setItem("access_token", data.access_token);
-    localStorage.setItem("parent_id", data.parent_id);
-
     // ✅ Redirect after successful login
     window.location.href = "/dashboard";
   });

@@ -4,16 +4,14 @@ from yt_function import get_all_channel_videos_from_video
 from flask_sqlalchemy import SQLAlchemy
 from models import db , ParentUser, ChildAccount, AllowedVideo
 from dotenv import load_dotenv
-from flask_jwt_extended import JWTManager, get_jwt_identity, jwt_required
+from flask_jwt_extended import JWTManager
 import os
 
-#blueprints also wacky way to show a ensted directory 
-from blueprints.auth import auth_bp
 
 app = Flask(__name__)
 CORS(app)
 load_dotenv()  # loads variables from .env
-app.register_blueprint(auth_bp, url_prefix="/api/auth")
+
 
 #secure in the os.
 DATABASE_URL = os.getenv('DATABASE_URL')
@@ -26,10 +24,17 @@ app.secret_key=os.getenv('SECRET_KEY')
 db.init_app(app)
 
 #init JWT token stuffs
-#give different logins different tokens ex api from extension has 7 day and can request more time 
+
+app.config["JWT_TOKEN_LOCATION"] = ["headers"]
+app.config["JWT_COOKIE_CSRF_PROTECT"] = False
 jwt = JWTManager(app)
 
-
+#import blue prints
+from blueprints.auth import auth_bp
+from blueprints.dash import dash_bp
+#register blue prints
+app.register_blueprint(auth_bp, url_prefix="/api/auth")
+app.register_blueprint(dash_bp, url_prefix="/api/dash")
 
 @app.route("/ping", methods = ['POST'])
 def ping():
@@ -57,17 +62,6 @@ def create_child():
 @app.route("/dashboard")
 def dashboard():
     return render_template("dashboard.html")
-
-@app.route("/api/dashboard")
-@jwt_required()
-def dashboard_data():
-    parent_id = get_jwt_identity()
-    parent = ParentUser.query.get(parent_id)
-
-    return jsonify({
-        "children": [c.name for c in parent.children]
-    })
-
 
 
 #this can go into a different blueprint at some point
