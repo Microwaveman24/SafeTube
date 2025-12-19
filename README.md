@@ -1,3 +1,8 @@
+
+As of 12/11/2025 we are over 1000 lines of code
+
+To install all dependencies use pip install -r requirements.txt
+
 SafeTube is currently in its first phase
 Currently a protype for the extension has been completed
   - Able to block and allow youtube videos/channels

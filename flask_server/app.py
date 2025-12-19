@@ -1,7 +1,6 @@
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 from yt_function import get_all_channel_videos_from_video
-from flask_sqlalchemy import SQLAlchemy
 from models import db , ParentUser, ChildAccount, AllowedVideo
 from dotenv import load_dotenv
 from flask_jwt_extended import JWTManager
