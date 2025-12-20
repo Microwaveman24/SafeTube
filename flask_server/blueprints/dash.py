@@ -56,8 +56,11 @@ def generate_pair_code():
     )
     db.session.add(pair)
     db.session.commit()
+    #athutnentication is in auth.py
+    return jsonify({"code" : code}), 200
 
-    return jsonify({"code" : code})
+
+
 
 #other dashboard commands will go here
 

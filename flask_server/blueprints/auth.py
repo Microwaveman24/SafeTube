@@ -1,12 +1,14 @@
 from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, ParentUser, ChildAccount
+from models import db, ParentUser, ChildAccount, DevicePairing, Device
 from datetime import timedelta
 from flask_jwt_extended import (
 create_access_token,
 jwt_required,
 get_jwt_identity
 )
+from datetime import datetime
+import secrets
 auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/signup", methods=['POST'])
@@ -79,3 +81,34 @@ def remove_child(child_id):
     db.session.delete(child)
     db.session.commit()
     return jsonify({"message": "Child removed"})
+
+@auth_bp.route("/device/pair", methods=['POST'])
+def pair_child():
+    data = request.get_json()
+    if not data or "code" not in data:
+        return jsonify({"Error" : "Bad data!"})
+    
+    code = data.get("code")
+    code_obj = DevicePairing.query.filter_by(code = code).first()
+
+    #filter out bad codes
+    if not code_obj:
+        return jsonify({ "Error" : "Code is incorrect"}), 400
+    if datetime.utcnow() > code_obj.expires_at:
+        return jsonify({ "Error" : "Code has expired!"}), 400
+    if code_obj.used:
+        return jsonify({ "Error" : "Code is already used"}), 400
+
+    child = ChildAccount.query.get(code_obj.child_id)
+    device_token = secrets.token_urlsafe(48)
+    #create child device
+    child_device = Device(
+        child_id = child.id,
+        device_token = device_token,
+        last_seen = datetime.utcnow()
+    )
+    code_obj.used = True
+    db.session.add(child_device)
+    db.session.commit()
+    return jsonify({"device_token" : device_token, "child_name" : child.name}), 200
+    

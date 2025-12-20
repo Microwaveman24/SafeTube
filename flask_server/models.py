@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-
+from datetime import datetime
 db = SQLAlchemy()
 
 class ParentUser(db.Model):
@@ -48,5 +48,18 @@ class DevicePairing(db.Model):
     child_id = db.Column(db.Integer, db.ForeignKey('child_accounts.id'))
     used = db.Column(db.Boolean, default=False)
     expires_at = db.Column(db.DateTime)
+    #add a used at column ar somepoint for record keeping
 
+class Device(db.Model):
+    __tablename__ = "device"
+
+    id = db.Column(db.Integer, primary_key=True)
+    child_id = db.Column(db.Integer, db.ForeignKey("child_accounts.id"), nullable=False)
+
+    device_token = db.Column(db.String(128), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_seen = db.Column(db.DateTime)
+    active = db.Column(db.Boolean, default=True)
+
+    child = db.relationship("ChildAccount", backref="devices")
 #things to add approved channels, and seperate approved video lists, AI responses, chached channel contents
