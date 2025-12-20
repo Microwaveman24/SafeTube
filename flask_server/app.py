@@ -1,9 +1,10 @@
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 from yt_function import get_all_channel_videos_from_video
-from models import db , ParentUser, ChildAccount, AllowedVideo
+from models import db , ParentUser, ChildAccount, AllowedVideo, DevicePairing, VideoRequest
 from dotenv import load_dotenv
 from flask_jwt_extended import JWTManager
+
 import os
 
 
@@ -17,10 +18,14 @@ DATABASE_URL = os.getenv('DATABASE_URL')
 JWT_KEY = os.getenv('JWT_KEY')
 
 #Config Stuffs
-app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL 
 app.config["JWT_SECRET_KEY"] = JWT_KEY  # for JWT signing
 app.secret_key=os.getenv('SECRET_KEY')
 db.init_app(app)
+
+#stuff to do with merging db
+from flask_migrate import Migrate
+migrate = Migrate(app, db)
 
 #init JWT token stuffs
 

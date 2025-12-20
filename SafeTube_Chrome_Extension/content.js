@@ -28,9 +28,7 @@ async function checkAndRedirect() {
 }
 //this works however it doesn't activate when a link is clicked
 document.body.addEventListener("mouseup", function(event) {
-    console.log("Action detected!")
-
-
+    //console.log("Action detected!")
     setTimeout( () => {
     checkAndRedirect();
     console.log("URL is checked");

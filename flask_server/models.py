@@ -41,4 +41,12 @@ class VideoRequest(db.Model):
     child_id = db.Column(db.Integer, db.ForeignKey('child_accounts.id'), nullable = False)
     child = db.relationship('ChildAccount', back_populates='video_requests')
 
+class DevicePairing(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+    code = db.Column(db.String(8), unique=True, nullable = False)
+    #all table names are lowercase
+    child_id = db.Column(db.Integer, db.ForeignKey('child_accounts.id'))
+    used = db.Column(db.Boolean, default=False)
+    expires_at = db.Column(db.DateTime)
+
 #things to add approved channels, and seperate approved video lists, AI responses, chached channel contents

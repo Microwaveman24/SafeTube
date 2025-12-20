@@ -5,3 +5,4 @@ python-dotenv
 flask_jwt_extended
 google-api-python-client
 psycopg2-binary
+flask-migrate

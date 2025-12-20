@@ -52,24 +52,30 @@
 </head>
 <body>
 
-    <h1>Parent Dashboard</h1>
+  <h1>Parent Dashboard</h1>
 
-    <div class="card">
-        <h3>Account</h3>
-        <p>Email: <strong id="parentEmail">Loading...</strong></p>
-    </div>
+  <div class="card">
+    <h3>Account</h3>
+    <p>Email: <strong id="parentEmail">Loading...</strong></p>
+  </div>
 
-    <div class="card">
+  <div class="card">
     <h3>Children</h3>
 
-    <div>
-        <input type="text" id="childNameInput" placeholder="Child name">
-        <button id="addChildBtn">Add Child</button>
+    <div class="add-child">
+      <input
+        type="text"
+        id="childNameInput"
+        placeholder="Child name"
+      />
+      <button id="addChildBtn">Add Child</button>
     </div>
 
+    <!-- JS will populate this -->
     <ul id="childrenList"></ul>
-</div>
+  </div>
 
-    <script src="/static/dashboard.js"></script>
+  <script src="/static/dashboard.js"></script>
 </body>
+
 </html>

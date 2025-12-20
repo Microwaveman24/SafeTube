@@ -1,9 +1,13 @@
 from flask import Blueprint, request, jsonify
-from models import db, ParentUser, ChildAccount, AllowedVideo, VideoRequest
+from models import db, ParentUser, ChildAccount, AllowedVideo, VideoRequest, DevicePairing
 from flask_jwt_extended import (
 jwt_required,
 get_jwt_identity
 )
+import secrets
+from datetime import datetime, timedelta
+
+
 dash_bp = Blueprint("dash", __name__)
 
 
@@ -11,9 +15,6 @@ dash_bp = Blueprint("dash", __name__)
 @dash_bp.route("/main_data", methods = ['POST', "OPTIONS"])
 @jwt_required(optional=True)
 def main_data():
-
-    print("AUTH HEADER:", request.headers.get("Authorization"))
-
     if request.method == "OPTIONS":
         return "", 200 
     
@@ -29,13 +30,34 @@ def main_data():
 
     #eventually will fix this to include video requests and other things
     packet = jsonify({
-        "children": [c.name for c in children],
+        "children": [
+            {
+                "id" : c.id,
+                "name" : c.name
+            } for c in children],
         "parent_email" : parent.email
     })
     return packet
 
 
+@dash_bp.route("generate_pair_code", methods=['POST'])
+@jwt_required()
+def generate_pair_code():
+    data = request.get_json()
+    child_id = data.get("child_id")
+    code = secrets.token_hex(3).upper()
 
+    expires = datetime.utcnow() + timedelta(minutes = 10)
+
+    pair = DevicePairing(
+        code = code,
+        child_id=child_id,
+        expires_at=expires
+    )
+    db.session.add(pair)
+    db.session.commit()
+
+    return jsonify({"code" : code})
 
 #other dashboard commands will go here
 

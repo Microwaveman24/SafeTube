@@ -24,23 +24,41 @@ async function loadDashboard() {
 
     const data = await response.json();
 
+    // Parent email
     document.getElementById("parentEmail").textContent = data.parent_email;
 
+    // Children list
     const list = document.getElementById("childrenList");
     list.innerHTML = "";
 
-    if (data.children.length === 0) {
+    if (!data.children || data.children.length === 0) {
         list.innerHTML = "<li>No children linked</li>";
         return;
     }
 
-    data.children.forEach(name => {
+    data.children.forEach(child => {
         const li = document.createElement("li");
-        li.textContent = name;
+        li.className = "child-row";
+
+        li.innerHTML = `
+            <span class="child-name">${child.name}</span>
+            <div class="child-actions">
+                <button onclick="connectDevice(${child.id})">
+                    Connect Device
+                </button>
+                <button onclick="viewProfile(${child.id})">
+                    View Profile
+                </button>
+            </div>
+        `;
+
         list.appendChild(li);
     });
 }
 
+// --------------------
+// Add Child
+// --------------------
 async function addChild() {
     const token = localStorage.getItem("access_token");
     const nameInput = document.getElementById("childNameInput");
@@ -71,11 +89,42 @@ async function addChild() {
     status.textContent = "Child created successfully!";
     nameInput.value = "";
 
-    // Refresh child list
     loadDashboard();
 }
 
+// --------------------
+// Connect Device
+// --------------------
+async function connectDevice(childId) {
+    const res = await fetch("/api/dash/generate_pair_code", {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ child_id: childId })
+    });
+
+    if (!res.ok) {
+        alert("Failed to generate pairing code");
+        return;
+    }
+
+    const data = await res.json();
+    alert(`Enter this code in the child's device:\n\n${data.code}`);
+}
+
+// --------------------
+// Placeholder for later
+// --------------------
+function viewProfile(childId) {
+    alert(`Child profile page coming soon (ID: ${childId})`);
+}
+
+// --------------------
 document.addEventListener("DOMContentLoaded", () => {
     loadDashboard();
-    document.getElementById("addChildBtn").addEventListener("click", addChild);
+    document
+        .getElementById("addChildBtn")
+        .addEventListener("click", addChild);
 });
