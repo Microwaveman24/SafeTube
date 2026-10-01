@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeTube — Parent Dashboard</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <div class="wrap header-row">
+    <h1>🛡️ SafeTube <span class="sub">Parent Dashboard</span></h1>
+    <div class="key-box">
+      <label for="familyKey">Family key</label>
+      <input id="familyKey" type="password" placeholder="Enter family key" autocomplete="off">
+      <button id="saveKey" class="btn small">Save</button>
+      <button id="logoutBtn" class="btn small ghost" title="Log out of the dashboard">Log out</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section>
+    <h2>Pending requests <span id="pendingCount" class="pill">0</span></h2>
+    <div id="pending" class="cards"></div>
+  </section>
+
+  <section>
+    <h2>Video whitelist <span id="whitelistCount" class="pill">0</span></h2>
+    <form id="addForm" class="add-form">
+      <input id="addInput" type="text" placeholder="Paste a YouTube URL or video ID…" required>
+      <button type="submit" class="btn">Add video</button>
+    </form>
+    <div id="whitelist" class="cards"></div>
+  </section>
+
+  <section>
+    <h2>Allowed channels <span id="channelCount" class="pill">0</span></h2>
+    <p class="hint">When a channel is allowed, <b>every</b> video from that channel plays without a request.</p>
+    <form id="addChannelForm" class="add-form">
+      <input id="addChannelInput" type="text" placeholder="Paste a channel URL (/channel/UC… or @handle) or channel ID…" required>
+      <button type="submit" class="btn">Allow channel</button>
+    </form>
+    <div id="channels" class="cards"></div>
+  </section>
+
+  <section>
+    <h2>Children</h2>
+    <div id="children" class="cards"></div>
+  </section>
+
+  <section>
+    <h2>History</h2>
+    <div id="history" class="cards"></div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <p>Auto-refreshes every 15 seconds. Videos open on youtube.com in a new tab.</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

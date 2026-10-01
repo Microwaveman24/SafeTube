@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeTube — Parent Login</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .login-wrap { max-width: 380px; margin: 12vh auto 0; }
+  .login-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 28px; }
+  .login-card h1 { margin-bottom: 6px; }
+  .login-card p { color: var(--muted); font-size: 0.9rem; }
+  .login-card input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; margin: 12px 0; }
+  .login-card button { width: 100%; }
+  #loginError { color: var(--red); font-size: 0.85rem; min-height: 1.2em; }
+</style>
+</head>
+<body>
+<div class="wrap login-wrap">
+  <div class="login-card">
+    <h1>🛡️ SafeTube</h1>
+    <p>Parent login — enter the parent password to open the dashboard.</p>
+    <form id="loginForm">
+      <input id="password" type="password" placeholder="Parent password" autocomplete="current-password" required>
+      <div id="loginError"></div>
+      <button type="submit" class="btn">Log in</button>
+    </form>
+  </div>
+</div>
+<script src="login.js"></script>
+</body>
+</html>

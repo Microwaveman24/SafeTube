@@ -1,0 +1,86 @@
+/* SafeTube overlay — injected over blocked YouTube videos. */
+
+#safetube-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647; /* above everything YouTube renders */
+  background: rgba(8, 8, 12, 0.97);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #f1f1f1;
+}
+
+#safetube-overlay .tg-card {
+  max-width: 420px;
+  width: calc(100% - 48px);
+  background: #1c1c22;
+  border: 1px solid #3a3a44;
+  border-radius: 16px;
+  padding: 28px;
+  text-align: center;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+}
+
+#safetube-overlay .tg-brand {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #8ab4ff;
+  margin-bottom: 16px;
+}
+
+#safetube-overlay .tg-thumb {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  background: #2a2a32;
+}
+
+#safetube-overlay .tg-title {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+  margin-bottom: 10px;
+  word-break: break-word;
+}
+
+#safetube-overlay .tg-msg {
+  font-size: 14px;
+  color: #c9c9d4;
+  line-height: 1.5;
+  margin: 0 0 18px 0;
+}
+
+#safetube-overlay .tg-ask-btn,
+#safetube-overlay .tg-retry-btn {
+  display: inline-block;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  background: #1a73e8;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 28px;
+  cursor: pointer;
+}
+
+#safetube-overlay .tg-ask-btn:hover:not(:disabled),
+#safetube-overlay .tg-retry-btn:hover {
+  background: #2b7fff;
+}
+
+#safetube-overlay .tg-ask-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+#safetube-overlay .tg-status {
+  font-size: 12.5px;
+  color: #9a9aa8;
+  margin: 14px 0 0 0;
+  line-height: 1.5;
+}
