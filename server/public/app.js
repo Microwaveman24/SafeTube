@@ -1,27 +1,26 @@
 'use strict';
-/* SafeTube parent dashboard — vanilla JS. Family key stored in localStorage. */
+/* SafeTube parent dashboard — session-cookie auth (no family key in the browser). */
 
-const KEY_STORE = 'safetube.familyKey';
 const REFRESH_MS = 15000;
 
 const $ = (id) => document.getElementById(id);
 const pendingEl = $('pending'), whitelistEl = $('whitelist'), historyEl = $('history');
-const channelsEl = $('channels'), childrenEl = $('children');
-const keyInput = $('familyKey');
-
-function getKey() { return localStorage.getItem(KEY_STORE) || ''; }
-function setKey(v) { localStorage.setItem(KEY_STORE, v); }
+const channelsEl = $('channels'), childrenEl = $('children'), devicesEl = $('devices');
 
 function api(path, opts = {}) {
   return fetch(path, {
+    credentials: 'same-origin',
     ...opts,
-    headers: { 'Content-Type': 'application/json', 'X-Family-Key': getKey(), ...(opts.headers || {}) },
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
   }).then(async (r) => {
     if (r.status === 401) {
-      pendingEl.innerHTML = '<div class="empty notice">Wrong or missing family key — enter it above and click Save.</div>';
+      window.location.href = '/login.html';
       throw new Error('unauthorized');
     }
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (!r.ok) {
+      const data = await r.json().catch(() => ({}));
+      throw new Error(data.error || ('HTTP ' + r.status));
+    }
     const text = await r.text();
     return text ? JSON.parse(text) : {};
   });
@@ -32,6 +31,15 @@ const watchUrl = (id) => `https://www.youtube.com/watch?v=${id}`;
 const channelUrl = (id) => `https://www.youtube.com/channel/${id}`;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const when = (iso) => { try { return new Date(iso).toLocaleString(); } catch { return iso; } };
+const ago = (iso) => {
+  if (!iso) return 'never';
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const h = Math.round(mins / 60);
+  if (h < 48) return `${h} h ago`;
+  return `${Math.round(h / 24)} d ago`;
+};
 
 /** Extract an 11-char YouTube video ID from a URL, embed/shorts link, or raw ID. */
 function parseVideoId(input) {
@@ -43,16 +51,9 @@ function parseVideoId(input) {
   return m ? m[1] : null;
 }
 
-/**
- * Extract a channel ID from a channel URL (/channel/UC…), a watch URL is NOT
- * enough (needs the API), or a raw UC… ID. @handles can't be resolved without
- * a YouTube API key — the server will reject those with a hint.
- */
 function parseChannelId(input) {
   const s = String(input || '').trim();
   if (/^UC[A-Za-z0-9_-]{22}$/.test(s)) return s;
-  // @handles can't be resolved to channel IDs without a YouTube API key —
-  // those must be allowed from a video request card instead.
   const m = s.match(/youtube\.com\/channel\/(UC[A-Za-z0-9_-]{22})/);
   return m ? m[1] : null;
 }
@@ -165,6 +166,34 @@ function childCard(c) {
   return div;
 }
 
+function deviceCard(d) {
+  const div = document.createElement('div');
+  div.className = 'card';
+  const statusLabel = { online: 'Online', quiet: 'Quiet', 'never-seen': 'No signal yet' }[d.status] || d.status;
+  div.innerHTML = `
+    <div class="body">
+      <div class="title">${esc(d.childName || 'Unnamed device')}</div>
+      <div><span class="badge status-${d.status}">${esc(statusLabel)}</span>
+        ${d.alerted ? '<span class="badge alerted">alert sent</span>' : ''}</div>
+      <div class="meta">Last check-in: ${esc(ago(d.lastSeenAt))}</div>
+      <div class="meta mono">ID: ${esc(d.deviceId)}</div>
+      <div class="actions"><button class="btn remove">Forget device</button></div>
+    </div>`;
+  const btn = div.querySelector('button');
+  btn.onclick = async () => {
+    if (!confirm('Forget this device? It will re-register itself next time the extension checks in.')) return;
+    btn.disabled = true;
+    try {
+      await api(`/api/devices/${encodeURIComponent(d.deviceId)}`, { method: 'DELETE' });
+      await refresh();
+    } catch (e) {
+      btn.disabled = false;
+      if (e.message !== 'unauthorized') alert('Remove failed: ' + e.message);
+    }
+  };
+  return div;
+}
+
 function historyCard(r) {
   const div = document.createElement('div');
   div.className = 'card';
@@ -184,21 +213,25 @@ function empty(msg) {
 }
 
 async function refresh() {
-  if (!getKey()) return;
   try {
-    const [pending, wl, channels, children, history] = await Promise.all([
+    const [pending, wl, channels, children, devices, history] = await Promise.all([
       api('/api/requests?status=pending'),
       api('/api/whitelist'),
       api('/api/channel-whitelist'),
       api('/api/children'),
+      api('/api/devices'),
       api('/api/requests?status=all'),
     ]);
     $('pendingCount').textContent = pending.length;
     $('whitelistCount').textContent = wl.videoIds.length;
     $('channelCount').textContent = channels.channels.length;
+    $('deviceCount').textContent = devices.devices.length;
 
     pendingEl.innerHTML = '';
     pendingEl.append(...(pending.length ? pending.map(requestCard) : [empty('No pending requests. 🎉')]));
+
+    devicesEl.innerHTML = '';
+    devicesEl.append(...(devices.devices.length ? devices.devices.map(deviceCard) : [empty('No devices yet — install the extension on the child\'s browser.')]));
 
     whitelistEl.innerHTML = '';
     whitelistEl.append(...(wl.videoIds.length ? wl.videoIds.map(whitelistCard) : [empty('Video whitelist is empty.')]));
@@ -215,6 +248,13 @@ async function refresh() {
   } catch (e) {
     if (e.message !== 'unauthorized') console.error(e);
   }
+}
+
+async function loadMe() {
+  try {
+    const me = await api('/api/auth/me');
+    $('parentEmail').textContent = me.email;
+  } catch (e) { /* redirect handled by api() */ }
 }
 
 // ---- wiring ----
@@ -235,7 +275,7 @@ $('addChannelForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const id = parseChannelId($('addChannelInput').value);
   if (!id) {
-    alert('Could not find a channel ID. Paste a URL like https://www.youtube.com/channel/UC… or the raw channel ID.\n(@handles need a YouTube API key on the server to resolve.)');
+    alert('Could not find a channel ID. Paste a URL like https://www.youtube.com/channel/UC… or the raw channel ID.');
     return;
   }
   try {
@@ -247,22 +287,42 @@ $('addChannelForm').addEventListener('submit', async (e) => {
   }
 });
 
-$('saveKey').addEventListener('click', () => {
-  setKey(keyInput.value.trim());
-  refresh();
+$('testEmailBtn').addEventListener('click', async (e) => {
+  const btn = e.target;
+  btn.disabled = true;
+  try {
+    const r = await api('/api/devices/test-email', { method: 'POST' });
+    alert('Test email sent to ' + r.to);
+  } catch (err) {
+    if (err.message !== 'unauthorized') alert('Test email failed: ' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$('accountBtn').addEventListener('click', async () => {
+  const current = prompt('Enter your current password:');
+  if (!current) return;
+  const next1 = prompt('Enter a new password (min 8 characters):');
+  if (!next1) return;
+  const next2 = prompt('Confirm the new password:');
+  if (next1 !== next2) { alert('Passwords do not match.'); return; }
+  try {
+    await api('/api/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword: current, newPassword: next1 }),
+    });
+    alert('Password changed.');
+  } catch (err) {
+    if (err.message !== 'unauthorized') alert('Password change failed: ' + err.message);
+  }
 });
 
 $('logoutBtn').addEventListener('click', async () => {
-  try { await fetch('/api/auth/logout', { method: 'POST' }); } catch (e) { /* ignore */ }
+  try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) { /* ignore */ }
   window.location.href = '/login.html';
 });
 
-// Prompt for the family key on first load.
-if (!getKey()) {
-  const k = prompt('Enter your SafeTube family key (set FAMILY_KEY on the server):');
-  if (k) { setKey(k.trim()); }
-}
-keyInput.value = getKey();
-
+loadMe();
 refresh();
 setInterval(refresh, REFRESH_MS);

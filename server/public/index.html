@@ -11,9 +11,8 @@
   <div class="wrap header-row">
     <h1>🛡️ SafeTube <span class="sub">Parent Dashboard</span></h1>
     <div class="key-box">
-      <label for="familyKey">Family key</label>
-      <input id="familyKey" type="password" placeholder="Enter family key" autocomplete="off">
-      <button id="saveKey" class="btn small">Save</button>
+      <span id="parentEmail" class="muted-text"></span>
+      <button id="accountBtn" class="btn small ghost" title="Change password">Account</button>
       <button id="logoutBtn" class="btn small ghost" title="Log out of the dashboard">Log out</button>
     </div>
   </div>
@@ -23,6 +22,14 @@
   <section>
     <h2>Pending requests <span id="pendingCount" class="pill">0</span></h2>
     <div id="pending" class="cards"></div>
+  </section>
+
+  <section>
+    <h2>Devices <span id="deviceCount" class="pill">0</span></h2>
+    <p class="hint">Every browser running the child's extension checks in every few minutes.
+       If a device goes quiet, you get an email — it may be off, or the extension may have been disabled.
+       <button id="testEmailBtn" class="btn small ghost" type="button">Send test email</button></p>
+    <div id="devices" class="cards"></div>
   </section>
 
   <section>

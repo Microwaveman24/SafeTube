@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SafeTube — Parent Login</title>
+<title>SafeTube — Set up parent account</title>
 <link rel="stylesheet" href="styles.css">
 <style>
-  .login-wrap { max-width: 380px; margin: 12vh auto 0; }
+  .login-wrap { max-width: 400px; margin: 10vh auto 0; }
   .login-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 28px; }
   .login-card h1 { margin-bottom: 6px; }
   .login-card p { color: var(--muted); font-size: 0.9rem; }
   .login-card input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; margin: 8px 0; }
   .login-card button { width: 100%; margin-top: 8px; }
-  #loginError { color: var(--red); font-size: 0.85rem; min-height: 1.2em; }
+  #setupError { color: var(--red); font-size: 0.85rem; min-height: 1.2em; }
   .field-label { font-size: 0.8rem; color: var(--muted); margin-top: 6px; display: block; }
 </style>
 </head>
@@ -20,17 +20,21 @@
 <div class="wrap login-wrap">
   <div class="login-card">
     <h1>🛡️ SafeTube</h1>
-    <p>Parent login — sign in to open the dashboard.</p>
-    <form id="loginForm">
+    <p><b>One-time setup.</b> Create your parent account. You'll use this email and
+       password to open the dashboard — and tamper alerts will be sent here
+       (unless you set <code>ALERT_EMAIL</code> on the server).</p>
+    <form id="setupForm">
       <label class="field-label" for="email">Email</label>
       <input id="email" type="email" placeholder="you@example.com" autocomplete="email" required>
-      <label class="field-label" for="password">Password</label>
-      <input id="password" type="password" placeholder="Password" autocomplete="current-password" required>
-      <div id="loginError"></div>
-      <button type="submit" class="btn">Log in</button>
+      <label class="field-label" for="password">Password (min 8 characters)</label>
+      <input id="password" type="password" placeholder="Choose a strong password" autocomplete="new-password" required minlength="8">
+      <label class="field-label" for="password2">Confirm password</label>
+      <input id="password2" type="password" placeholder="Repeat password" autocomplete="new-password" required minlength="8">
+      <div id="setupError"></div>
+      <button type="submit" class="btn">Create parent account</button>
     </form>
   </div>
 </div>
-<script src="login.js"></script>
+<script src="setup.js"></script>
 </body>
 </html>
