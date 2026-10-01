@@ -27,6 +27,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   $('familyKey').value = cur.tg_familyKey || '';
   $('childName').value = cur.tg_childName || '';
 
+  // Show this browser's device ID (used for tamper detection).
+  try {
+    const resp = await chrome.runtime.sendMessage({ type: 'getDeviceId' });
+    if (resp && resp.ok) $('deviceId').textContent = 'Device ID: ' + resp.deviceId;
+  } catch (e) {
+    $('deviceId').textContent = 'Device ID unavailable — the background worker may still be starting.';
+  }
+
   $('saveBtn').addEventListener('click', async () => {
     const { baseUrl, familyKey, childName } = readForm();
     await chrome.storage.local.set({

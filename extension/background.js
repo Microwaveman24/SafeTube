@@ -8,6 +8,9 @@
  *  - Proxy backend API calls for the content script (single place for auth + settings).
  *  - Remember video IDs approved during this session so the child isn't re-blocked
  *    on the same video after the parent approves it.
+ *  - TAMPER DETECTION: register this browser as a device and send a heartbeat
+ *    every few minutes. If the extension is disabled/removed, heartbeats stop
+ *    and the parent server emails the parent after a quiet period.
  *
  * FAIL-CLOSED: if the backend can't be reached and there is no cached whitelist,
  * every API call rejects and the content script shows a blocking overlay.
@@ -17,7 +20,9 @@
 const CACHE_KEY = 'tg_whitelistCache';   // { videoIds: string[], updatedAt: number }
 const CHANNEL_CACHE_KEY = 'tg_channelCache'; // { channelIds: string[], updatedAt: number }
 const APPROVED_KEY = 'tg_sessionApproved'; // string[] — approved this session, not yet on server whitelist
+const DEVICE_ID_KEY = 'tg_deviceId';     // stable per-browser device identifier
 const REFRESH_ALARM = 'tg-refresh-whitelist';
+const HEARTBEAT_ALARM = 'tg-heartbeat';
 const STALE_AFTER_MS = 60 * 1000;
 
 /* ---------------- settings + low-level API ---------------- */
@@ -46,6 +51,44 @@ async function apiFetch(path, opts = {}) {
   // Some endpoints may return an empty body; tolerate that.
   const text = await res.text();
   return text ? JSON.parse(text) : {};
+}
+
+/* ---------------- device identity + heartbeat ---------------- */
+
+/** Stable per-browser device ID, created once and kept in local storage. */
+async function getDeviceId() {
+  const stored = await chrome.storage.local.get(DEVICE_ID_KEY);
+  if (stored[DEVICE_ID_KEY]) return stored[DEVICE_ID_KEY];
+  const id = (crypto.randomUUID ? crypto.randomUUID() : 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+  await chrome.storage.local.set({ [DEVICE_ID_KEY]: id });
+  return id;
+}
+
+async function registerDevice() {
+  try {
+    const deviceId = await getDeviceId();
+    const { childName } = await getSettings();
+    await apiFetch('/api/devices/register', {
+      method: 'POST',
+      body: JSON.stringify({ deviceId, childName })
+    });
+  } catch (e) {
+    // Registration is best-effort; the heartbeat will retry it via auto-register.
+  }
+}
+
+async function sendHeartbeat() {
+  try {
+    const deviceId = await getDeviceId();
+    const { childName } = await getSettings();
+    await apiFetch('/api/devices/heartbeat', {
+      method: 'POST',
+      body: JSON.stringify({ deviceId, childName })
+    });
+  } catch (e) {
+    // Heartbeat failures are silent — the server-side watchdog is what
+    // notices and alerts. The next alarm retries.
+  }
 }
 
 /* ---------------- whitelist cache ---------------- */
@@ -144,6 +187,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       case 'refreshWhitelist':
         return await refreshWhitelist();
 
+      case 'getDeviceId':
+        return { deviceId: await getDeviceId() };
+
       case 'requestApproval': {
         // POST /api/requests {videoId, title, url, childName, channelId, channelTitle} -> 201 {id, status:"pending"}
         const { childName } = await getSettings();
@@ -181,16 +227,19 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   return true; // keep the message channel open for the async response
 });
 
-/* ---------------- periodic refresh ---------------- */
+/* ---------------- periodic work ---------------- */
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === REFRESH_ALARM) refreshWhitelist();
+  if (alarm.name === HEARTBEAT_ALARM) sendHeartbeat();
 });
 
-function ensureAlarm() {
+function ensureAlarms() {
   chrome.alarms.create(REFRESH_ALARM, { periodInMinutes: 1 });
+  chrome.alarms.create(HEARTBEAT_ALARM, { periodInMinutes: 3 });
   refreshWhitelist();
+  registerDevice().then(() => sendHeartbeat());
 }
 
-chrome.runtime.onInstalled.addListener(ensureAlarm);
-chrome.runtime.onStartup.addListener(ensureAlarm);
+chrome.runtime.onInstalled.addListener(ensureAlarms);
+chrome.runtime.onStartup.addListener(ensureAlarms);

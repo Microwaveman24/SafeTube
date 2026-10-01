@@ -34,6 +34,10 @@ No build step: plain JS/CSS/HTML, load unpacked via `chrome://extensions`.
 - **Child name** — sent with approval requests so the parent knows who asked.
 - Click **Test connection**: it does `GET {base}/api/whitelist` with your key and reports
   success/failure plus the current whitelist size.
+- **Device ID** — shown read-only at the bottom. The extension registers this
+  browser with the parent server and sends a heartbeat every 3 minutes. If the
+  extension is disabled or removed, heartbeats stop and the parent gets an email
+  (tamper detection — see the main README).
 
 ## How it works
 

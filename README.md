@@ -4,6 +4,11 @@ A Chrome extension for the child's browser that blocks every YouTube video
 unless a parent has approved it (or its whole channel is allowed), plus a
 parent dashboard webpage for approving/declining requests.
 
+**New in v4:** real parent accounts (email + bcrypt password, one-time setup),
+tamper detection — if the child disables the extension the parent gets an
+email — and a modular, scalable server codebase (see
+`server/SERVER_README.md`).
+
 ## How it works
 
 1. Child opens any YouTube video or Short → the extension checks the
@@ -20,28 +25,41 @@ parent dashboard webpage for approving/declining requests.
 
 If the extension can't reach the server, videos stay blocked (fail closed).
 
+### Tamper detection
+
+Each browser running the extension registers as a **device** and sends a
+heartbeat every 3 minutes. If a device goes quiet longer than
+`TAMPER_ALERT_AFTER_MINUTES` (default 30), the server emails the parent:
+the PC may simply be off — or the extension may have been disabled or removed.
+The dashboard's **Devices** section shows every device, its last check-in,
+and whether an alert was sent.
+
 ## Project layout
 
 - `extension/` — Chrome extension, Manifest V3, no build step. See
   `extension/EXTENSION_README.md`.
-- `server/` — Node.js + Express + SQLite parent server & dashboard. See
-  `server/SERVER_README.md`.
+- `server/` — Node.js + Express + SQLite parent server & dashboard, modular
+  `src/` layout (config, db layer, routes, services, middleware). See
+  `server/SERVER_README.md`. Includes a `Dockerfile` for deployment.
 
 ## Setup — parent side (do this first)
 
 ```bash
 cd server
 npm install
-FAMILY_KEY=pick-a-strong-secret PARENT_PASSWORD=another-strong-secret npm start
+FAMILY_KEY=$(openssl rand -hex 32) npm start
 ```
 
-- Dashboard: http://localhost:3000/ (login required when `PARENT_PASSWORD` is set)
+- Open the dashboard at http://localhost:3000/ — first run shows a
+  **one-time setup page** to create your parent account (email + password).
+  Log in with it from then on.
 - The server must be reachable from the child's browser. On the same home
   network, use the parent computer's LAN IP instead of `localhost`
   (e.g. `http://192.168.1.10:3000`). For access outside the home, host it on
-  a small VPS or Raspberry Pi.
-- Optional: set `YOUTUBE_API_KEY` (YouTube Data API v3 key) so the server can
-  fill in missing video titles / channel names on requests.
+  a small VPS or Raspberry Pi (or build/run the included `Dockerfile`).
+- To receive tamper alerts by email, configure SMTP (see `.env.example`;
+  Gmail works with an App Password), then use the dashboard's **Send test
+  email** button to verify.
 
 ## Setup — child side (Chrome extension)
 
@@ -50,10 +68,11 @@ FAMILY_KEY=pick-a-strong-secret PARENT_PASSWORD=another-strong-secret npm start
    folder.
 2. Open the extension's **Options** page: set the server URL
    (e.g. `http://192.168.1.10:3000`), the family key, and the child's name.
-   Use **Test connection** to verify.
-3. Lock it down: in `chrome://extensions`, the extension can still be
-   disabled by anyone with access to that page. For real enforcement, pair
-   this with OS-level parental controls:
+   Use **Test connection** to verify. The options page also shows this
+   browser's device ID.
+3. Lock it down: a child with access to `chrome://extensions` can still
+   disable the extension — but now you'll get an email when they do. For
+   real enforcement, pair this with OS-level parental controls:
    - **ChromeOS / Family Link**: manage the child's Google account and
      prevent extension changes.
    - **Windows/macOS**: use a non-admin account for the child so they
@@ -66,25 +85,30 @@ This rewrite keeps every feature that mattered and rebuilds it on a simpler stac
 
 | Old SafeTube | New SafeTube |
 |---|---|
-| Flask + SQLAlchemy + Postgres, JWT auth, alembic migrations | Node + Express + SQLite, single file, zero-config DB |
+| Flask + SQLAlchemy + Postgres, JWT auth, alembic migrations | Node + Express + SQLite, modular `src/` layout, zero-config DB |
 | Blocked videos via `declarativeNetRequest` redirect to a static page | Full-page overlay with **request-approval flow** and 15 s polling |
 | Channel allow = bulk-adding every video ID of the channel via YouTube API | **Channel whitelist**: one channel ID allows all its videos; extension reads the channel ID from page metadata; dashboard can "Approve + allow channel" |
 | YouTube Data API required for channel features | API key **optional** — only used to enrich request metadata when the extension didn't supply it |
-| Parent signup/login + child accounts + device pairing codes (JWT) | Simplified: `PARENT_PASSWORD` env gates the dashboard (scrypt-hashed, session cookie); the extension reports `childName` per request; dashboard shows a per-child summary |
-| No parent dashboard for approvals | Full dashboard: pending requests, video whitelist, allowed channels, children, history |
+| Parent signup/login + child accounts + device pairing codes (JWT) | Parent accounts (email + bcrypt, one-time setup, DB sessions); device registration via heartbeat; dashboard shows per-child summary |
+| No tamper detection | Heartbeat watchdog + email alerts when a device goes quiet |
 
 Dropped without replacement: the old `rules.json` DNR approach (the overlay is
 strictly better UX for an approval flow) and the committed `.venv/` leftovers
 (the old virtualenv directory is still in the repo history but no longer used).
 
+**Upgrading from v3:** `PARENT_PASSWORD` is gone. On first boot with v4, open
+the dashboard and create a parent account via the setup page. The dashboard no
+longer asks for the family key (it uses your login session); the extension
+still uses `FAMILY_KEY` from its options page. Existing whitelists, requests,
+and history in `safetube.db` are preserved automatically.
+
 ## Honest limitations
 
 - This is a deterrent + approval workflow, not a sandbox. A tech-savvy
-  child with admin access can disable the extension or read the family key
-  from extension storage.
+  child with admin access can disable the extension — but tamper detection
+  means you'll know about it within ~30 minutes.
 - Only covers youtube.com watch/shorts pages in Chrome. It does not cover
   the YouTube mobile app, embedded players on other sites, or other
   browsers.
-- The dashboard has no login of its own beyond `PARENT_PASSWORD` — keep the
-  server on your home network or put it behind your own authentication if
-  exposed to the internet.
+- If the server is exposed to the internet, serve it over HTTPS and set
+  `COOKIE_SECURE=true` (see `server/.env.example`).
