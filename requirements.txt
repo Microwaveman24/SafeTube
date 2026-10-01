@@ -1,8 +1,0 @@
-flask
-flask_cors
-flask_sqlalchemy
-python-dotenv
-flask_jwt_extended
-google-api-python-client
-psycopg2-binary
-flask-migrate
