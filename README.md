@@ -83,25 +83,6 @@ FAMILY_KEY=$(openssl rand -hex 32) npm start
 The previous version of this repo was a Flask + `declarativeNetRequest` prototype.
 This rewrite keeps every feature that mattered and rebuilds it on a simpler stack:
 
-| Old SafeTube | New SafeTube |
-|---|---|
-| Flask + SQLAlchemy + Postgres, JWT auth, alembic migrations | Node + Express + SQLite, modular `src/` layout, zero-config DB |
-| Blocked videos via `declarativeNetRequest` redirect to a static page | Full-page overlay with **request-approval flow** and 15 s polling |
-| Channel allow = bulk-adding every video ID of the channel via YouTube API | **Channel whitelist**: one channel ID allows all its videos; extension reads the channel ID from page metadata; dashboard can "Approve + allow channel" |
-| YouTube Data API required for channel features | API key **optional** — only used to enrich request metadata when the extension didn't supply it |
-| Parent signup/login + child accounts + device pairing codes (JWT) | Parent accounts (email + bcrypt, one-time setup, DB sessions); device registration via heartbeat; dashboard shows per-child summary |
-| No tamper detection | Heartbeat watchdog + email alerts when a device goes quiet |
-
-Dropped without replacement: the old `rules.json` DNR approach (the overlay is
-strictly better UX for an approval flow) and the committed `.venv/` leftovers
-(the old virtualenv directory is still in the repo history but no longer used).
-
-**Upgrading from v3:** `PARENT_PASSWORD` is gone. On first boot with v4, open
-the dashboard and create a parent account via the setup page. The dashboard no
-longer asks for the family key (it uses your login session); the extension
-still uses `FAMILY_KEY` from its options page. Existing whitelists, requests,
-and history in `safetube.db` are preserved automatically.
-
 ## Honest limitations
 
 - This is a deterrent + approval workflow, not a sandbox. A tech-savvy
