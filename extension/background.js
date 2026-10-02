@@ -243,3 +243,7 @@ function ensureAlarms() {
 
 chrome.runtime.onInstalled.addListener(ensureAlarms);
 chrome.runtime.onStartup.addListener(ensureAlarms);
+// Also run on every service-worker start: browsers don't always deliver
+// onStartup/onInstalled (e.g. lazy SW wake-ups), and without this the
+// heartbeat/refresh alarms may never exist.
+try { ensureAlarms(); } catch (e) { /* alarm setup is best-effort */ }
