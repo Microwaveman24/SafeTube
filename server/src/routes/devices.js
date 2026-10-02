@@ -13,6 +13,7 @@
 
 const express = require('express');
 const devices = require('../db/devices');
+const children = require('../db/children');
 const { requireParent, requireFamilyKey } = require('../middleware/auth');
 const { reqString, optString } = require('../middleware/validate');
 const monitor = require('../services/monitor');
@@ -23,13 +24,26 @@ const { config } = require('../config');
 
 const router = express.Router();
 
+/**
+ * Resolve (creating on demand) the child profile for an extension-reported
+ * name. Returns { childId, childName } with the canonical stored name.
+ * When no parent account exists yet, childId is null and rows stay unlinked
+ * until the backfill runs.
+ */
+function resolveChild(childName) {
+  const parentId = parents.firstId();
+  if (!parentId) return { childId: null, childName: childName || '' };
+  const child = children.resolveOrCreate(parentId, childName);
+  return { childId: child.id, childName: child.name };
+}
+
 // --- extension-facing ---
 
 router.post('/register', requireFamilyKey, (req, res, next) => {
   try {
     const deviceId = reqString(req.body && req.body.deviceId, 'deviceId', { max: 64 });
-    const childName = optString(req.body && req.body.childName, { max: 100 });
-    const device = devices.register(deviceId, childName);
+    const { childId, childName } = resolveChild(optString(req.body && req.body.childName, { max: 100 }));
+    const device = devices.register(deviceId, childName, childId);
     logger.debug(`[devices] registered heartbeat source: ${deviceId} (${childName})`);
     res.status(201).json({ ok: true, device: devices.toJson(device) });
   } catch (err) {
@@ -43,7 +57,8 @@ router.post('/heartbeat', requireFamilyKey, async (req, res, next) => {
     let device = devices.get(deviceId);
     if (!device) {
       // Auto-register unknown devices so a wiped extension storage self-heals.
-      device = devices.register(deviceId, optString(req.body && req.body.childName, { max: 100 }));
+      const { childId, childName } = resolveChild(optString(req.body && req.body.childName, { max: 100 }));
+      device = devices.register(deviceId, childName, childId);
     } else {
       const wasAlerted = device.alert_state === 1;
       devices.heartbeat(deviceId);

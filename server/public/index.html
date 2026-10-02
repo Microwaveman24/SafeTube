@@ -12,20 +12,39 @@
     <h1>🛡️ SafeTube <span class="sub">Parent Dashboard</span></h1>
     <div class="key-box">
       <span id="parentEmail" class="muted-text"></span>
-      <button id="accountBtn" class="btn small ghost" title="Change password">Account</button>
+      <button id="accountBtn" class="btn small ghost" title="Account settings">Account</button>
       <button id="logoutBtn" class="btn small ghost" title="Log out of the dashboard">Log out</button>
     </div>
   </div>
 </header>
 
 <main class="wrap">
+  <div class="child-bar">
+    <label for="childSelect"><strong>Viewing:</strong></label>
+    <select id="childSelect" aria-label="Select child"></select>
+  </div>
+
   <section>
-    <h2>Pending requests <span id="pendingCount" class="pill">0</span></h2>
+    <h2>Family key</h2>
+    <div class="card key-card">
+      <div class="body">
+        <div class="key-row">
+          <code id="familyKeyValue" class="mono key-value">••••••••••</code>
+          <button id="revealKeyBtn" class="btn small ghost" type="button">Reveal</button>
+          <button id="copyKeyBtn" class="btn small ghost" type="button">Copy</button>
+        </div>
+        <p class="hint">Enter this key in the extension's options page on your child's browser.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Pending requests <span id="pendingCount" class="pill">0</span><span class="child-name" id="pendingChildName"></span></h2>
     <div id="pending" class="cards"></div>
   </section>
 
   <section>
-    <h2>Devices <span id="deviceCount" class="pill">0</span></h2>
+    <h2>Devices <span id="deviceCount" class="pill">0</span><span class="child-name" id="devicesChildName"></span></h2>
     <p class="hint">Every browser running the child's extension checks in every few minutes.
        If a device goes quiet, you get an email — it may be off, or the extension may have been disabled.
        <button id="testEmailBtn" class="btn small ghost" type="button">Send test email</button></p>
@@ -33,7 +52,7 @@
   </section>
 
   <section>
-    <h2>Video whitelist <span id="whitelistCount" class="pill">0</span></h2>
+    <h2>Video whitelist <span id="whitelistCount" class="pill">0</span><span class="child-name" id="whitelistChildName"></span></h2>
     <form id="addForm" class="add-form">
       <input id="addInput" type="text" placeholder="Paste a YouTube URL or video ID…" required>
       <button type="submit" class="btn">Add video</button>
@@ -42,7 +61,7 @@
   </section>
 
   <section>
-    <h2>Allowed channels <span id="channelCount" class="pill">0</span></h2>
+    <h2>Allowed channels <span id="channelCount" class="pill">0</span><span class="child-name" id="channelsChildName"></span></h2>
     <p class="hint">When a channel is allowed, <b>every</b> video from that channel plays without a request.</p>
     <form id="addChannelForm" class="add-form">
       <input id="addChannelInput" type="text" placeholder="Paste a channel URL (/channel/UC… or @handle) or channel ID…" required>
@@ -52,15 +71,49 @@
   </section>
 
   <section>
-    <h2>Children</h2>
+    <h2>Children <span id="childrenCount" class="pill">0</span></h2>
+    <form id="addChildForm" class="add-form">
+      <input id="addChildInput" type="text" placeholder="Child's name…" required maxlength="60">
+      <button type="submit" class="btn">Add child</button>
+    </form>
     <div id="children" class="cards"></div>
   </section>
 
   <section>
-    <h2>History</h2>
+    <h2>History<span class="child-name" id="historyChildName"></span></h2>
     <div id="history" class="cards"></div>
   </section>
 </main>
+
+<div id="accountModal" class="modal-overlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="accountTitle">
+    <div class="modal-head">
+      <h2 id="accountTitle">Account</h2>
+      <button id="accountClose" class="btn small ghost" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="acct-row"><span class="acct-label">Email</span><span id="acctEmail">—</span></div>
+      <div class="acct-row"><span class="acct-label">Account created</span><span id="acctCreated">—</span></div>
+      <div class="acct-row"><span class="acct-label">Children</span><span id="acctChildren">—</span></div>
+      <div class="acct-row"><span class="acct-label">Devices</span><span id="acctDevices">—</span></div>
+      <hr class="acct-div">
+      <h3>Change password</h3>
+      <form id="pwForm" class="pw-form">
+        <label>Current password
+          <input id="pwCurrent" type="password" required autocomplete="current-password">
+        </label>
+        <label>New password
+          <input id="pwNew" type="password" required minlength="8" autocomplete="new-password">
+        </label>
+        <label>Confirm new password
+          <input id="pwConfirm" type="password" required autocomplete="new-password">
+        </label>
+        <button type="submit" class="btn">Change password</button>
+        <p id="pwMsg" class="form-msg" role="status"></p>
+      </form>
+    </div>
+  </div>
+</div>
 
 <footer class="wrap">
   <p>Auto-refreshes every 15 seconds. Videos open on youtube.com in a new tab.</p>

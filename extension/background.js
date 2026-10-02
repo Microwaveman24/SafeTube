@@ -122,9 +122,11 @@ async function getWhitelist() {
   }
 
   try {
+    const { childName: wlChild } = await getSettings();
+    const wlQs = '?childName=' + encodeURIComponent(wlChild || '');
     const [videos, channels] = await Promise.all([
-      apiFetch('/api/whitelist'),
-      apiFetch('/api/channel-whitelist').catch(() => ({ channelIds: [] })),
+      apiFetch('/api/whitelist' + wlQs),
+      apiFetch('/api/channel-whitelist' + wlQs).catch(() => ({ channelIds: [] })),
     ]);
     const videoIds = Array.isArray(videos.videoIds) ? videos.videoIds : [];
     const channelIds = Array.isArray(channels.channelIds) ? channels.channelIds : [];
@@ -150,9 +152,11 @@ async function getWhitelist() {
 /** Force a refresh (used by the periodic alarm, options page, and content script). */
 async function refreshWhitelist() {
   try {
+    const { childName: wlChild } = await getSettings();
+    const wlQs = '?childName=' + encodeURIComponent(wlChild || '');
     const [videos, channels] = await Promise.all([
-      apiFetch('/api/whitelist'),
-      apiFetch('/api/channel-whitelist').catch(() => ({ channelIds: [] })),
+      apiFetch('/api/whitelist' + wlQs),
+      apiFetch('/api/channel-whitelist' + wlQs).catch(() => ({ channelIds: [] })),
     ]);
     const videoIds = Array.isArray(videos.videoIds) ? videos.videoIds : [];
     const channelIds = Array.isArray(channels.channelIds) ? channels.channelIds : [];

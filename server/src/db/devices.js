@@ -8,10 +8,11 @@
 const db = require('./index');
 
 const stmtUpsert = db.prepare(`
-  INSERT INTO devices (device_id, child_name, last_seen_at, created_at, alert_state, last_alert_at)
-  VALUES (?, ?, ?, ?, 0, NULL)
+  INSERT INTO devices (device_id, child_name, child_id, last_seen_at, created_at, alert_state, last_alert_at)
+  VALUES (?, ?, ?, ?, ?, 0, NULL)
   ON CONFLICT(device_id) DO UPDATE SET
     child_name = excluded.child_name,
+    child_id = COALESCE(excluded.child_id, devices.child_id),
     last_seen_at = excluded.last_seen_at
 `);
 const stmtHeartbeat = db.prepare(`
@@ -32,9 +33,9 @@ const stmtMarkAlerted = db.prepare(
 );
 const stmtDelete = db.prepare('DELETE FROM devices WHERE device_id = ?');
 
-function register(deviceId, childName) {
+function register(deviceId, childName, childId) {
   const now = new Date().toISOString();
-  stmtUpsert.run(deviceId, childName || '', now, now);
+  stmtUpsert.run(deviceId, childName || '', childId == null ? null : childId, now, now);
   return get(deviceId);
 }
 
@@ -67,6 +68,7 @@ function remove(deviceId) {
 function toJson(r) {
   return {
     deviceId: r.device_id,
+    childId: r.child_id == null ? null : r.child_id,
     childName: r.child_name || '',
     lastSeenAt: r.last_seen_at,
     createdAt: r.created_at,

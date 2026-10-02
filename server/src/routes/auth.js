@@ -13,6 +13,7 @@
 const express = require('express');
 const parents = require('../db/parents');
 const sessions = require('../db/sessions');
+const { config } = require('../config');
 const {
   requireParent,
   setSessionCookie,
@@ -90,6 +91,11 @@ router.post('/logout', (req, res) => {
 
 router.get('/me', requireParent, (req, res) => {
   res.json({ id: req.parent.id, email: req.parent.email, createdAt: req.parent.createdAt });
+});
+
+/** Expose the family key to the logged-in parent (for pasting into the extension). */
+router.get('/family-key', requireParent, (_req, res) => {
+  res.json({ familyKey: config.familyKey });
 });
 
 router.post('/change-password', requireParent, authLimiter, async (req, res, next) => {

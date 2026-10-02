@@ -10,6 +10,7 @@ const db = require('./index');
 const { config } = require('../config');
 
 const stmtCount = db.prepare('SELECT COUNT(*) AS n FROM parents');
+const stmtFirstId = db.prepare('SELECT id FROM parents LIMIT 1');
 const stmtByEmail = db.prepare('SELECT * FROM parents WHERE email = ?');
 const stmtById = db.prepare('SELECT * FROM parents WHERE id = ?');
 const stmtInsert = db.prepare(
@@ -20,6 +21,12 @@ const stmtAllEmails = db.prepare('SELECT email FROM parents ORDER BY id ASC');
 
 function count() {
   return stmtCount.get().n;
+}
+
+/** The single parent's id (this server supports exactly one parent account). */
+function firstId() {
+  const row = stmtFirstId.get();
+  return row ? row.id : null;
 }
 
 function setupRequired() {
@@ -64,6 +71,7 @@ function byId(id) {
 
 module.exports = {
   count,
+  firstId,
   setupRequired,
   createParent,
   verifyCredentials,

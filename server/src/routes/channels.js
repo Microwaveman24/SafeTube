@@ -1,29 +1,41 @@
 'use strict';
 /**
- * Channel whitelist routes.
- * - GET  /api/channel-whitelist              (parent session OR family key)
- * - POST /api/channel-whitelist  {channelId, title?}  (parent: session)
- * - DELETE /api/channel-whitelist/:channelId          (parent: session)
+ * Per-child channel whitelist routes.
+ * - GET    /api/channel-whitelist?childId=… | ?childName=… → { channelIds } (family key) | { channels } (parent session)
+ * - POST   /api/channel-whitelist  {channelId, title?, childId}            (parent: session)
+ * - DELETE /api/channel-whitelist/:channelId?childId=…                     (parent: session)
  */
 
 const express = require('express');
 const { channels } = require('../db/whitelists');
 const { requireParent, requireParentOrFamilyKey } = require('../middleware/auth');
 const { channelId, optString } = require('../middleware/validate');
+const { resolveChild, ownChild } = require('./childScope');
 
 const router = express.Router();
 
-router.get('/', requireParentOrFamilyKey, (_req, res) => {
-  const all = channels.all();
-  res.json({
-    channels: all,
-    channelIds: all.map((c) => c.channelId),
-  });
+router.get('/', requireParentOrFamilyKey, (req, res, next) => {
+  try {
+    const child = resolveChild(req);
+    const all = channels.all(child.id);
+    if (req.parent) {
+      res.json({ channels: all });
+    } else {
+      res.json({ channelIds: all.map((c) => c.channelId) });
+    }
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.post('/', requireParent, (req, res, next) => {
   try {
-    channels.add(channelId(req.body && req.body.channelId), optString(req.body && req.body.title));
+    const child = ownChild(req, req.body && req.body.childId);
+    channels.add(
+      child.id,
+      channelId(req.body && req.body.channelId),
+      optString(req.body && req.body.title)
+    );
     res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -32,7 +44,8 @@ router.post('/', requireParent, (req, res, next) => {
 
 router.delete('/:channelId', requireParent, (req, res, next) => {
   try {
-    channels.remove(channelId(req.params.channelId));
+    const child = ownChild(req, req.query.childId);
+    channels.remove(child.id, channelId(req.params.channelId));
     res.json({ ok: true });
   } catch (err) {
     next(err);

@@ -2,10 +2,21 @@
 /* SafeTube parent dashboard — session-cookie auth (no family key in the browser). */
 
 const REFRESH_MS = 15000;
+const CHILD_ID_KEY = 'safetube.childId';
 
 const $ = (id) => document.getElementById(id);
 const pendingEl = $('pending'), whitelistEl = $('whitelist'), historyEl = $('history');
 const channelsEl = $('channels'), childrenEl = $('children'), devicesEl = $('devices');
+const childSelect = $('childSelect');
+const addForm = $('addForm'), addChannelForm = $('addChannelForm');
+
+// ---- state ----
+let childrenCache = [];
+let devicesCache = [];
+let selectedChildId = null;
+try { selectedChildId = localStorage.getItem(CHILD_ID_KEY); } catch (e) { /* storage unavailable */ }
+let familyKey = null;
+let familyKeyRevealed = false;
 
 function api(path, opts = {}) {
   return fetch(path, {
@@ -57,6 +68,25 @@ function parseChannelId(input) {
   const m = s.match(/youtube\.com\/channel\/(UC[A-Za-z0-9_-]{22})/);
   return m ? m[1] : null;
 }
+
+function selectedChild() {
+  if (!childrenCache.length || !selectedChildId) return null;
+  return childrenCache.find((c) => String(c.id) === String(selectedChildId)) || null;
+}
+
+function persistChildId(id) {
+  selectedChildId = id == null || id === '' ? null : String(id);
+  try {
+    if (selectedChildId) localStorage.setItem(CHILD_ID_KEY, selectedChildId);
+    else localStorage.removeItem(CHILD_ID_KEY);
+  } catch (e) { /* ignore */ }
+}
+
+function empty(msg) {
+  return Object.assign(document.createElement('div'), { className: 'empty', textContent: msg });
+}
+
+// ---- cards ----
 
 function requestCard(r) {
   const div = document.createElement('div');
@@ -120,8 +150,10 @@ function whitelistCard(videoId) {
   const btn = div.querySelector('button');
   btn.onclick = async () => {
     btn.disabled = true;
+    const child = selectedChild();
     try {
-      await api(`/api/whitelist/${encodeURIComponent(videoId)}`, { method: 'DELETE' });
+      const q = child ? `?childId=${encodeURIComponent(child.id)}` : '';
+      await api(`/api/whitelist/${encodeURIComponent(videoId)}${q}`, { method: 'DELETE' });
       await refresh();
     } catch (e) {
       btn.disabled = false;
@@ -144,25 +176,16 @@ function channelCard(ch) {
   btn.onclick = async () => {
     if (!confirm('Stop allowing this entire channel? Its videos will need approval again.')) return;
     btn.disabled = true;
+    const child = selectedChild();
     try {
-      await api(`/api/channel-whitelist/${encodeURIComponent(ch.channelId)}`, { method: 'DELETE' });
+      const q = child ? `?childId=${encodeURIComponent(child.id)}` : '';
+      await api(`/api/channel-whitelist/${encodeURIComponent(ch.channelId)}${q}`, { method: 'DELETE' });
       await refresh();
     } catch (e) {
       btn.disabled = false;
       if (e.message !== 'unauthorized') alert('Remove failed: ' + e.message);
     }
   };
-  return div;
-}
-
-function childCard(c) {
-  const div = document.createElement('div');
-  div.className = 'card';
-  div.innerHTML = `
-    <div class="body">
-      <div class="title">${esc(c.name)}</div>
-      <div class="meta">${c.requests} request(s) total · ${c.pending} pending</div>
-    </div>`;
   return div;
 }
 
@@ -208,46 +231,234 @@ function historyCard(r) {
   return div;
 }
 
-function empty(msg) {
-  return Object.assign(document.createElement('div'), { className: 'empty', textContent: msg });
+function childCard(c) {
+  const div = document.createElement('div');
+  div.className = 'card';
+  const stats = `${c.deviceCount ?? 0} device(s) · ${c.pendingRequests ?? 0} pending request(s) · ${c.videoCount ?? 0} videos · ${c.channelCount ?? 0} channels`;
+  div.innerHTML = `
+    <div class="body">
+      <div class="title">${esc(c.name)}</div>
+      <div class="meta">${esc(stats)}</div>
+      <div class="meta">Added ${esc(when(c.createdAt))}</div>
+      <div class="actions">
+        <button class="btn small rename">Rename</button>
+        <button class="btn small remove">Delete</button>
+      </div>
+    </div>`;
+  const [renameBtn, delBtn] = div.querySelectorAll('button');
+  renameBtn.onclick = () => renameChild(c);
+  delBtn.onclick = () => deleteChild(c);
+  return div;
+}
+
+// ---- children ----
+
+function renderChildren() {
+  $('childrenCount').textContent = String(childrenCache.length);
+  childrenEl.innerHTML = '';
+  childrenEl.append(...(childrenCache.length
+    ? childrenCache.map(childCard)
+    : [empty('No children yet — add your first child above.')]));
+}
+
+/** Fetch children, rebuild the selector (preserving a valid selection), render cards. */
+async function syncChildren(preferId) {
+  const data = await api('/api/children');
+  childrenCache = data.children || [];
+  childSelect.innerHTML = '';
+  if (!childrenCache.length) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'No children yet';
+    childSelect.appendChild(opt);
+  } else {
+    for (const c of childrenCache) {
+      const opt = document.createElement('option');
+      opt.value = String(c.id);
+      opt.textContent = c.name;
+      childSelect.appendChild(opt);
+    }
+  }
+  let want = preferId != null ? String(preferId) : selectedChildId;
+  if (!childrenCache.some((c) => String(c.id) === String(want))) {
+    want = childrenCache.length ? String(childrenCache[0].id) : null;
+  }
+  persistChildId(want);
+  childSelect.value = want || '';
+  renderChildren();
+}
+
+async function renameChild(c) {
+  const name = prompt('Rename child:', c.name);
+  if (name == null) return;
+  const trimmed = name.trim();
+  if (!trimmed || trimmed === c.name) return;
+  try {
+    await api(`/api/children/${encodeURIComponent(c.id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name: trimmed }),
+    });
+    await syncChildren(c.id);
+    await refresh();
+  } catch (e) {
+    if (e.message !== 'unauthorized') alert('Rename failed: ' + e.message);
+  }
+}
+
+async function deleteChild(c) {
+  if (!confirm(`Delete ${c.name}? This removes their whitelists, requests, and devices. This cannot be undone.`)) return;
+  try {
+    await api(`/api/children/${encodeURIComponent(c.id)}`, { method: 'DELETE' });
+    const wasSelected = String(selectedChildId) === String(c.id);
+    await syncChildren(wasSelected ? null : selectedChildId);
+    await refresh();
+  } catch (e) {
+    if (e.message !== 'unauthorized') alert('Delete failed: ' + e.message);
+  }
+}
+
+// ---- sections ----
+
+function updateSectionLabels(child) {
+  const label = child ? ` — ${child.name}` : '';
+  $('pendingChildName').textContent = label;
+  $('devicesChildName').textContent = label;
+  $('whitelistChildName').textContent = label;
+  $('channelsChildName').textContent = label;
+  $('historyChildName').textContent = label;
+}
+
+function showNoChildState() {
+  ['pendingCount', 'whitelistCount', 'channelCount', 'deviceCount'].forEach((id) => { $(id).textContent = '0'; });
+  updateSectionLabels(null);
+  addForm.style.display = 'none';
+  addChannelForm.style.display = 'none';
+  const msg = 'Add a child below to get started — requests, devices, and whitelists are managed per child.';
+  for (const el of [pendingEl, devicesEl, whitelistEl, channelsEl, historyEl]) {
+    el.innerHTML = '';
+    el.append(empty(msg));
+  }
 }
 
 async function refresh() {
   try {
-    const [pending, wl, channels, children, devices, history] = await Promise.all([
-      api('/api/requests?status=pending'),
-      api('/api/whitelist'),
-      api('/api/channel-whitelist'),
-      api('/api/children'),
+    await syncChildren();
+  } catch (e) {
+    if (e.message === 'unauthorized') return;
+    // On transient errors, continue with the cached children list.
+  }
+  const child = selectedChild();
+  updateSectionLabels(child);
+  if (!child) {
+    showNoChildState();
+    return;
+  }
+  addForm.style.display = '';
+  addChannelForm.style.display = '';
+  try {
+    const cid = encodeURIComponent(child.id);
+    const [pending, wl, channels, devices, history] = await Promise.all([
+      api(`/api/requests?status=pending&childId=${cid}`),
+      api(`/api/whitelist?childId=${cid}`),
+      api(`/api/channel-whitelist?childId=${cid}`),
       api('/api/devices'),
-      api('/api/requests?status=all'),
+      api(`/api/requests?status=all&childId=${cid}`),
     ]);
+    devicesCache = devices.devices || [];
+    const myDevices = devicesCache.filter((d) => String(d.childId) === String(child.id));
+
     $('pendingCount').textContent = pending.length;
-    $('whitelistCount').textContent = wl.videoIds.length;
-    $('channelCount').textContent = channels.channels.length;
-    $('deviceCount').textContent = devices.devices.length;
+    $('whitelistCount').textContent = (wl.videoIds || []).length;
+    $('channelCount').textContent = (channels.channels || []).length;
+    $('deviceCount').textContent = myDevices.length;
 
     pendingEl.innerHTML = '';
     pendingEl.append(...(pending.length ? pending.map(requestCard) : [empty('No pending requests. 🎉')]));
 
     devicesEl.innerHTML = '';
-    devicesEl.append(...(devices.devices.length ? devices.devices.map(deviceCard) : [empty('No devices yet — install the extension on the child\'s browser.')]));
+    devicesEl.append(...(myDevices.length ? myDevices.map(deviceCard) : [empty('No devices yet — install the extension on the child\'s browser.')]));
 
     whitelistEl.innerHTML = '';
-    whitelistEl.append(...(wl.videoIds.length ? wl.videoIds.map(whitelistCard) : [empty('Video whitelist is empty.')]));
+    const vids = wl.videoIds || [];
+    whitelistEl.append(...(vids.length ? vids.map(whitelistCard) : [empty('Video whitelist is empty.')]));
 
     channelsEl.innerHTML = '';
-    channelsEl.append(...(channels.channels.length ? channels.channels.map(channelCard) : [empty('No channels allowed yet.')]));
+    const chs = channels.channels || [];
+    channelsEl.append(...(chs.length ? chs.map(channelCard) : [empty('No channels allowed yet.')]));
 
-    childrenEl.innerHTML = '';
-    childrenEl.append(...(children.children.length ? children.children.map(childCard) : [empty('No children have made requests yet.')]));
-
-    const done = history.filter((r) => r.status !== 'pending');
+    const done = (history || []).filter((r) => r.status !== 'pending');
     historyEl.innerHTML = '';
     historyEl.append(...(done.length ? done.map(historyCard) : [empty('No decisions yet.')]));
   } catch (e) {
     if (e.message !== 'unauthorized') console.error(e);
   }
+}
+
+// ---- family key ----
+
+async function loadFamilyKey() {
+  try {
+    const data = await api('/api/auth/family-key');
+    familyKey = data.familyKey || '';
+  } catch (e) {
+    familyKey = '';
+  }
+  renderFamilyKey();
+}
+
+function renderFamilyKey() {
+  $('familyKeyValue').textContent = (familyKeyRevealed && familyKey) ? familyKey : '••••••••••';
+  $('revealKeyBtn').textContent = familyKeyRevealed ? 'Hide' : 'Reveal';
+}
+
+async function copyFamilyKey() {
+  if (!familyKey) return;
+  const btn = $('copyKeyBtn');
+  try {
+    await navigator.clipboard.writeText(familyKey);
+  } catch (e) {
+    // Fallback for older browsers / non-secure contexts.
+    const ta = document.createElement('textarea');
+    ta.value = familyKey;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e2) { /* ignore */ }
+    ta.remove();
+  }
+  btn.textContent = 'Copied!';
+  setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+}
+
+// ---- account modal ----
+
+function openAccountModal() {
+  $('accountModal').hidden = false;
+  $('pwMsg').textContent = '';
+  $('pwMsg').className = 'form-msg';
+  loadAccountData();
+}
+
+function closeAccountModal() {
+  $('accountModal').hidden = true;
+}
+
+async function loadAccountData() {
+  try {
+    const me = await api('/api/auth/me');
+    $('acctEmail').textContent = me.email || '—';
+    $('acctCreated').textContent = me.createdAt ? when(me.createdAt) : '—';
+    $('acctChildren').textContent = String(childrenCache.length);
+    let devCount = devicesCache.length;
+    if (!devCount) {
+      try {
+        const d = await api('/api/devices');
+        devCount = (d.devices || []).length;
+      } catch (e) { /* ignore */ }
+    }
+    $('acctDevices').textContent = String(devCount);
+  } catch (e) { /* 401 redirect handled by api() */ }
 }
 
 async function loadMe() {
@@ -258,12 +469,20 @@ async function loadMe() {
 }
 
 // ---- wiring ----
+
+childSelect.addEventListener('change', () => {
+  persistChildId(childSelect.value || null);
+  refresh();
+});
+
 $('addForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const child = selectedChild();
+  if (!child) return;
   const id = parseVideoId($('addInput').value);
   if (!id) { alert('Could not find a video ID in that input.'); return; }
   try {
-    await api('/api/whitelist', { method: 'POST', body: JSON.stringify({ videoId: id }) });
+    await api('/api/whitelist', { method: 'POST', body: JSON.stringify({ videoId: id, childId: child.id }) });
     $('addInput').value = '';
     await refresh();
   } catch (err) {
@@ -273,17 +492,33 @@ $('addForm').addEventListener('submit', async (e) => {
 
 $('addChannelForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const child = selectedChild();
+  if (!child) return;
   const id = parseChannelId($('addChannelInput').value);
   if (!id) {
     alert('Could not find a channel ID. Paste a URL like https://www.youtube.com/channel/UC… or the raw channel ID.');
     return;
   }
   try {
-    await api('/api/channel-whitelist', { method: 'POST', body: JSON.stringify({ channelId: id }) });
+    await api('/api/channel-whitelist', { method: 'POST', body: JSON.stringify({ channelId: id, childId: child.id }) });
     $('addChannelInput').value = '';
     await refresh();
   } catch (err) {
     if (err.message !== 'unauthorized') alert('Add failed: ' + err.message);
+  }
+});
+
+$('addChildForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = $('addChildInput').value.trim();
+  if (!name) return;
+  try {
+    const data = await api('/api/children', { method: 'POST', body: JSON.stringify({ name }) });
+    $('addChildInput').value = '';
+    await syncChildren(data.child && data.child.id);
+    await refresh();
+  } catch (err) {
+    if (err.message !== 'unauthorized') alert('Add child failed: ' + err.message);
   }
 });
 
@@ -300,21 +535,42 @@ $('testEmailBtn').addEventListener('click', async (e) => {
   }
 });
 
-$('accountBtn').addEventListener('click', async () => {
-  const current = prompt('Enter your current password:');
-  if (!current) return;
-  const next1 = prompt('Enter a new password (min 8 characters):');
-  if (!next1) return;
-  const next2 = prompt('Confirm the new password:');
-  if (next1 !== next2) { alert('Passwords do not match.'); return; }
+$('revealKeyBtn').addEventListener('click', () => {
+  familyKeyRevealed = !familyKeyRevealed;
+  renderFamilyKey();
+});
+$('copyKeyBtn').addEventListener('click', copyFamilyKey);
+
+$('accountBtn').addEventListener('click', openAccountModal);
+$('accountClose').addEventListener('click', closeAccountModal);
+$('accountModal').addEventListener('click', (e) => {
+  if (e.target === $('accountModal')) closeAccountModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !$('accountModal').hidden) closeAccountModal();
+});
+
+$('pwForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = $('pwMsg');
+  msg.className = 'form-msg';
+  const cur = $('pwCurrent').value;
+  const nw = $('pwNew').value;
+  const cf = $('pwConfirm').value;
+  if (nw !== cf) { msg.textContent = 'New passwords do not match.'; msg.classList.add('error'); return; }
+  if (nw.length < 8) { msg.textContent = 'New password must be at least 8 characters.'; msg.classList.add('error'); return; }
   try {
     await api('/api/auth/change-password', {
       method: 'POST',
-      body: JSON.stringify({ currentPassword: current, newPassword: next1 }),
+      body: JSON.stringify({ currentPassword: cur, newPassword: nw }),
     });
-    alert('Password changed.');
+    msg.textContent = 'Password changed.';
+    msg.classList.add('ok');
+    $('pwForm').reset();
   } catch (err) {
-    if (err.message !== 'unauthorized') alert('Password change failed: ' + err.message);
+    if (err.message === 'unauthorized') return;
+    msg.textContent = 'Password change failed: ' + err.message;
+    msg.classList.add('error');
   }
 });
 
@@ -324,5 +580,6 @@ $('logoutBtn').addEventListener('click', async () => {
 });
 
 loadMe();
+loadFamilyKey();
 refresh();
 setInterval(refresh, REFRESH_MS);
