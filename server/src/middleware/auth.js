@@ -71,6 +71,19 @@ function requireFamilyKey(req, res, next) {
   next();
 }
 
+/**
+ * Require EITHER a logged-in parent (dashboard session cookie) OR the
+ * X-Family-Key shared secret (extension). Use on read-only routes that both
+ * audiences need (e.g. fetching the whitelist). Management mutations stay
+ * parent-only via requireParent.
+ */
+function requireParentOrFamilyKey(req, res, next) {
+  if (req.parent) return next();
+  const key = req.get('X-Family-Key');
+  if (key && key === config.familyKey) return next();
+  return res.status(401).json({ error: 'unauthorized' });
+}
+
 module.exports = {
   SESSION_COOKIE,
   parseCookies,
@@ -79,4 +92,5 @@ module.exports = {
   attachParent,
   requireParent,
   requireFamilyKey,
+  requireParentOrFamilyKey,
 };

@@ -1,19 +1,19 @@
 'use strict';
 /**
  * Channel whitelist routes.
- * - GET  /api/channel-whitelist              (extension: family key)
+ * - GET  /api/channel-whitelist              (parent session OR family key)
  * - POST /api/channel-whitelist  {channelId, title?}  (parent: session)
  * - DELETE /api/channel-whitelist/:channelId          (parent: session)
  */
 
 const express = require('express');
 const { channels } = require('../db/whitelists');
-const { requireParent, requireFamilyKey } = require('../middleware/auth');
+const { requireParent, requireParentOrFamilyKey } = require('../middleware/auth');
 const { channelId, optString } = require('../middleware/validate');
 
 const router = express.Router();
 
-router.get('/', requireFamilyKey, (_req, res) => {
+router.get('/', requireParentOrFamilyKey, (_req, res) => {
   const all = channels.all();
   res.json({
     channels: all,
