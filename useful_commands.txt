@@ -1,0 +1,2 @@
+cloc . --exclude-dir=.venv,.git
+#count number of lines of code
